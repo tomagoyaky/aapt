@@ -22,7 +22,6 @@
 
 using namespace android;
 
-
 extern const char * const gDefaultIgnoreAssets;
 extern const char * gUserIgnoreAssets;
 

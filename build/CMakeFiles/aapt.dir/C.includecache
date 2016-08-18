@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+.././include/cutils/threads.h
+pthread.h
+-
+windows.h
+-
+
+/Users/admin/Documents/workspace/AAPT/src/qsort_r_compat.c
+stdlib.h
+-
+qsort_r_compat.h
+/Users/admin/Documents/workspace/AAPT/src/qsort_r_compat.h
+cutils/threads.h
+-
+
+/Users/admin/Documents/workspace/AAPT/src/qsort_r_compat.h
+stdlib.h
+-
+
