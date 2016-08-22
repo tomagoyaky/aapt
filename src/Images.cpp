@@ -11,8 +11,8 @@
 #include <androidfw/ResourceTypes.h>
 #include <utils/ByteOrder.h>
 
-#include <png.h>
-#include <zlib.h>
+#include <libpng/png.h>
+#include <zlib/zlib.h>
 
 // Change this to true for noisy debug output.
 static const bool kIsDebug = false;

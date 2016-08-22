@@ -10,7 +10,7 @@
 #include "StringPool.h"
 #include "ResourceTable.h"
 
-#include <expat.h>
+#include <libexpat/expat.h>
 
 class XMLNode;
 

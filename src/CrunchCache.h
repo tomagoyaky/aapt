@@ -15,7 +15,6 @@
 #include "CacheUpdater.h"
 
 using namespace android;
-
 /** CrunchCache
  *  This class is a cache manager which can pre-process PNG files and store
  *  them in a mirror-cache. It's capable of doing incremental updates to its
