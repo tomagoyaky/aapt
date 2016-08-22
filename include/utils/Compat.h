@@ -27,7 +27,7 @@
 
 typedef off_t off64_t;
 
-static inline off64_t lseek64(int fd, off64_t offset, int whence) {
+inline off64_t lseek64(int fd, off64_t offset, int whence) {
     return lseek(fd, offset, whence);
 }
 

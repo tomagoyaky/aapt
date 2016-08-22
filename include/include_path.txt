@@ -1,0 +1,3 @@
+WORKING_DIRECTORY/system/core/include	(其他)
+WORKING_DIRECTORY/frameworks/base/include (androidfw)
+WORKING_DIRECTORY/prebuilts/ndk/9/platforms/android-9/arch-x86/usr/include/android
