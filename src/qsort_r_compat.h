@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef __TEST_HELPER_H
-#define __TEST_HELPER_H
-
-#include <utils/String8.h>
-
-namespace android {
-
-/**
- * Stream operator for nicely printing String8's in gtest output.
+/*
+ * Provides a portable version of qsort_r, called qsort_r_compat, which is a
+ * reentrant variant of qsort that passes a user data pointer to its comparator.
+ * This implementation follows the BSD parameter convention.
  */
-inline std::ostream& operator<<(std::ostream& stream, const String8& str) {
-    return stream << str.string();
-}
 
-}
+#ifndef ___QSORT_R_COMPAT_H
+#define ___QSORT_R_COMPAT_H
 
+#include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+void qsort_r_compat(void* base, size_t nel, size_t width, void* thunk,
+        int (*compar)(void*, const void* , const void* ));
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // ___QSORT_R_COMPAT_H

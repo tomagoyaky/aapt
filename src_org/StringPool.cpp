@@ -3,31 +3,25 @@
 //
 // Build resource files from raw assets.
 //
+
 #include "StringPool.h"
+#include "ResourceTable.h"
 
 #include <utils/ByteOrder.h>
 #include <utils/SortedVector.h>
+#include "qsort_r_compat.h"
 
-#include <algorithm>
-
-#include "ResourceTable.h"
-
-// SSIZE: mingw does not have signed size_t == ssize_t.
-#if !defined(_WIN32)
+#if HAVE_PRINTF_ZD
 #  define ZD "%zd"
 #  define ZD_TYPE ssize_t
-#  define SSIZE(x) x
 #else
 #  define ZD "%ld"
 #  define ZD_TYPE long
-#  define SSIZE(x) (signed size_t)x
 #endif
 
-// Set to true for noisy debug output.
-static const bool kIsDebug = false;
+#define NOISY(x) //x
 
-#if __cplusplus >= 201103L
-void strcpy16_htod(char16_t* dst, const char16_t* src)
+void strcpy16_htod(uint16_t* dst, const uint16_t* src)
 {
     while (*src) {
         char16_t s = htods(*src);
@@ -36,28 +30,9 @@ void strcpy16_htod(char16_t* dst, const char16_t* src)
     }
     *dst = 0;
 }
-#endif
-
-void strcpy16_htod(uint16_t* dst, const char16_t* src)
-{
-    while (*src) {
-        uint16_t s = htods(static_cast<uint16_t>(*src));
-        *dst++ = s;
-        src++;
-    }
-    *dst = 0;
-}
 
 void printStringPool(const ResStringPool* pool)
 {
-    if (pool->getError() == NO_INIT) {
-        printf("String pool is unitialized.\n");
-        return;
-    } else if (pool->getError() != NO_ERROR) {
-        printf("String pool is corrupt/invalid.\n");
-        return;
-    }
-
     SortedVector<const void*> uniqueStrings;
     const size_t N = pool->size();
     for (size_t i=0; i<N; i++) {
@@ -157,10 +132,8 @@ ssize_t StringPool::add(const String16& value,
 
     if (configTypeName != NULL) {
         entry& ent = mEntries.editItemAt(eidx);
-        if (kIsDebug) {
-            printf("*** adding config type name %s, was %s\n",
-                    configTypeName->string(), ent.configTypeName.string());
-        }
+        NOISY(printf("*** adding config type name %s, was %s\n",
+                configTypeName->string(), ent.configTypeName.string()));
         if (ent.configTypeName.size() <= 0) {
             ent.configTypeName = *configTypeName;
         } else if (ent.configTypeName != *configTypeName) {
@@ -176,18 +149,14 @@ ssize_t StringPool::add(const String16& value,
             int cmp = ent.configs.itemAt(addPos).compareLogical(*config);
             if (cmp >= 0) {
                 if (cmp > 0) {
-                    if (kIsDebug) {
-                        printf("*** inserting config: %s\n", config->toString().string());
-                    }
+                    NOISY(printf("*** inserting config: %s\n", config->toString().string()));
                     ent.configs.insertAt(*config, addPos);
                 }
                 break;
             }
         }
         if (addPos >= ent.configs.size()) {
-            if (kIsDebug) {
-                printf("*** adding config: %s\n", config->toString().string());
-            }
+            NOISY(printf("*** adding config: %s\n", config->toString().string()));
             ent.configs.add(*config);
         }
     }
@@ -204,11 +173,9 @@ ssize_t StringPool::add(const String16& value,
         ent.indices.add(pos);
     }
 
-    if (kIsDebug) {
-        printf("Adding string %s to pool: pos=%zd eidx=%zd vidx=%zd\n",
-                String8(value).string(), SSIZE(pos), SSIZE(eidx), SSIZE(vidx));
-    }
-
+    NOISY(printf("Adding string %s to pool: pos=%d eidx=%d vidx=%d\n",
+            String8(value).string(), pos, eidx, vidx));
+    
     return pos;
 }
 
@@ -247,15 +214,12 @@ status_t StringPool::addStyleSpan(size_t idx, const entry_style_span& span)
     return NO_ERROR;
 }
 
-StringPool::ConfigSorter::ConfigSorter(const StringPool& pool) : pool(pool)
+int StringPool::config_sort(void* state, const void* lhs, const void* rhs)
 {
-}
-
-bool StringPool::ConfigSorter::operator()(size_t l, size_t r)
-{
-    const StringPool::entry& lhe = pool.mEntries[pool.mEntryArray[l]];
-    const StringPool::entry& rhe = pool.mEntries[pool.mEntryArray[r]];
-    return lhe.compare(rhe) < 0;
+    StringPool* pool = (StringPool*)state;
+    const entry& lhe = pool->mEntries[pool->mEntryArray[*static_cast<const size_t*>(lhs)]];
+    const entry& rhe = pool->mEntries[pool->mEntryArray[*static_cast<const size_t*>(rhs)]];
+    return lhe.compare(rhe);
 }
 
 void StringPool::sortByConfig()
@@ -275,14 +239,12 @@ void StringPool::sortByConfig()
     }
 
     // Sort the array.
-    if (kIsDebug) {
-        printf("SORTING STRINGS BY CONFIGURATION...\n");
-    }
-    ConfigSorter sorter(*this);
-    std::sort(newPosToOriginalPos.begin(), newPosToOriginalPos.end(), sorter);
-    if (kIsDebug) {
-        printf("DONE SORTING STRINGS BY CONFIGURATION.\n");
-    }
+    NOISY(printf("SORTING STRINGS BY CONFIGURATION...\n"));
+    // Vector::sort uses insertion sort, which is very slow for this data set.
+    // Use quicksort instead because we don't need a stable sort here.
+    qsort_r_compat(newPosToOriginalPos.editArray(), N, sizeof(size_t), this, config_sort);
+    //newPosToOriginalPos.sort(config_sort, this);
+    NOISY(printf("DONE SORTING STRINGS BY CONFIGURATION.\n"));
 
     // Create the reverse mapping from the original position in the array
     // to the new position where it appears in the sorted array.  This is
@@ -390,12 +352,12 @@ sp<AaptFile> StringPool::createStringBlock()
 
 #define ENCODE_LENGTH(str, chrsz, strSize) \
 { \
-    size_t maxMask = 1 << (((chrsz)*8)-1); \
+    size_t maxMask = 1 << ((chrsz*8)-1); \
     size_t maxSize = maxMask-1; \
-    if ((strSize) > maxSize) { \
-        *(str)++ = maxMask | (((strSize)>>((chrsz)*8))&maxSize); \
+    if (strSize > maxSize) { \
+        *str++ = maxMask | ((strSize>>(chrsz*8))&maxSize); \
     } \
-    *(str)++ = strSize; \
+    *str++ = strSize; \
 }
 
 status_t StringPool::writeStringBlock(const sp<AaptFile>& pool)
@@ -446,7 +408,7 @@ status_t StringPool::writeStringBlock(const sp<AaptFile>& pool)
         return NO_MEMORY;
     }
 
-    const size_t charSize = mUTF8 ? sizeof(uint8_t) : sizeof(uint16_t);
+    const size_t charSize = mUTF8 ? sizeof(uint8_t) : sizeof(char16_t);
 
     size_t strPos = 0;
     for (i=0; i<STRINGS; i++) {
@@ -485,9 +447,9 @@ status_t StringPool::writeStringBlock(const sp<AaptFile>& pool)
 
             strncpy((char*)strings, encStr, encSize+1);
         } else {
-            char16_t* strings = (char16_t*)dat;
+            uint16_t* strings = (uint16_t*)dat;
 
-            ENCODE_LENGTH(strings, sizeof(char16_t), strSize)
+            ENCODE_LENGTH(strings, sizeof(uint16_t), strSize)
 
             strcpy16_htod(strings, ent.value);
         }
@@ -579,13 +541,9 @@ status_t StringPool::writeStringBlock(const sp<AaptFile>& pool)
     for (i=0; i<ENTRIES; i++) {
         entry& ent = mEntries.editItemAt(mEntryArray[i]);
         *index++ = htodl(ent.offset);
-        if (kIsDebug) {
-            printf("Writing entry #%zu: \"%s\" ent=%zu off=%zu\n",
-                    i,
-                    String8(ent.value).string(),
-                    mEntryArray[i],
-                    ent.offset);
-        }
+        NOISY(printf("Writing entry #%d: \"%s\" ent=%d off=%d\n", i,
+                String8(ent.value).string(),
+                mEntryArray[i], ent.offset));
     }
 
     // Write style index array.
@@ -601,10 +559,8 @@ ssize_t StringPool::offsetForString(const String16& val) const
 {
     const Vector<size_t>* indices = offsetsForString(val);
     ssize_t res = indices != NULL && indices->size() > 0 ? indices->itemAt(0) : -1;
-    if (kIsDebug) {
-        printf("Offset for string %s: %zd (%s)\n", String8(val).string(), SSIZE(res),
-                res >= 0 ? String8(mEntries[mEntryArray[res]].value).string() : String8());
-    }
+    NOISY(printf("Offset for string %s: %d (%s)\n", String8(val).string(), res,
+            res >= 0 ? String8(mEntries[mEntryArray[res]].value).string() : String8()));
     return res;
 }
 

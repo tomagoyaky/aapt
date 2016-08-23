@@ -6,23 +6,22 @@
 #ifndef __AAPT_ASSETS_H
 #define __AAPT_ASSETS_H
 
+#include <stdlib.h>
 #include <androidfw/AssetManager.h>
 #include <androidfw/ResourceTypes.h>
-#include <stdlib.h>
-#include <set>
 #include <utils/KeyedVector.h>
 #include <utils/RefBase.h>
 #include <utils/SortedVector.h>
 #include <utils/String8.h>
+#include <utils/String8.h>
 #include <utils/Vector.h>
-
-#include "AaptConfig.h"
-#include "Bundle.h"
-#include "ConfigDescription.h"
-#include "SourcePos.h"
 #include "ZipFile.h"
 
+#include "Bundle.h"
+#include "SourcePos.h"
+
 using namespace android;
+
 
 extern const char * const gDefaultIgnoreAssets;
 extern const char * gUserIgnoreAssets;
@@ -35,7 +34,8 @@ enum {
     AXIS_NONE = 0,
     AXIS_MCC = 1,
     AXIS_MNC,
-    AXIS_LOCALE,
+    AXIS_LANGUAGE,
+    AXIS_REGION,
     AXIS_SCREENLAYOUTSIZE,
     AXIS_SCREENLAYOUTLONG,
     AXIS_ORIENTATION,
@@ -58,43 +58,6 @@ enum {
     AXIS_END = AXIS_VERSION,
 };
 
-struct AaptLocaleValue {
-     char language[4];
-     char region[4];
-     char script[4];
-     char variant[8];
-
-     AaptLocaleValue() {
-         memset(this, 0, sizeof(AaptLocaleValue));
-     }
-
-     // Initialize this AaptLocaleValue from a config string.
-     bool initFromFilterString(const String8& config);
-
-     int initFromDirName(const Vector<String8>& parts, const int startIndex);
-
-     // Initialize this AaptLocaleValue from a ResTable_config.
-     void initFromResTable(const ResTable_config& config);
-
-     void writeTo(ResTable_config* out) const;
-
-     int compare(const AaptLocaleValue& other) const {
-         return memcmp(this, &other, sizeof(AaptLocaleValue));
-     }
-
-     inline bool operator<(const AaptLocaleValue& o) const { return compare(o) < 0; }
-     inline bool operator<=(const AaptLocaleValue& o) const { return compare(o) <= 0; }
-     inline bool operator==(const AaptLocaleValue& o) const { return compare(o) == 0; }
-     inline bool operator!=(const AaptLocaleValue& o) const { return compare(o) != 0; }
-     inline bool operator>=(const AaptLocaleValue& o) const { return compare(o) >= 0; }
-     inline bool operator>(const AaptLocaleValue& o) const { return compare(o) > 0; }
-private:
-     void setLanguage(const char* language);
-     void setRegion(const char* language);
-     void setScript(const char* script);
-     void setVariant(const char* variant);
-};
-
 /**
  * This structure contains a specific variation of a single file out
  * of all the variations it can have that we can have.
@@ -102,14 +65,44 @@ private:
 struct AaptGroupEntry
 {
 public:
-    AaptGroupEntry() {}
-    explicit AaptGroupEntry(const ConfigDescription& config) : mParams(config) {}
+    AaptGroupEntry() : mParamsChanged(true) { }
+    AaptGroupEntry(const String8& _locale, const String8& _vendor)
+        : locale(_locale), vendor(_vendor), mParamsChanged(true) { }
 
     bool initFromDirName(const char* dir, String8* resType);
 
-    inline const ConfigDescription& toParams() const { return mParams; }
+    static status_t parseNamePart(const String8& part, int* axis, uint32_t* value);
 
-    inline int compare(const AaptGroupEntry& o) const { return mParams.compareLogical(o.mParams); }
+    static uint32_t getConfigValueForAxis(const ResTable_config& config, int axis);
+
+    static bool configSameExcept(const ResTable_config& config,
+            const ResTable_config& otherConfig, int axis);
+
+    static bool getMccName(const char* name, ResTable_config* out = NULL);
+    static bool getMncName(const char* name, ResTable_config* out = NULL);
+    static bool getLocaleName(const char* name, ResTable_config* out = NULL);
+    static bool getScreenLayoutSizeName(const char* name, ResTable_config* out = NULL);
+    static bool getScreenLayoutLongName(const char* name, ResTable_config* out = NULL);
+    static bool getOrientationName(const char* name, ResTable_config* out = NULL);
+    static bool getUiModeTypeName(const char* name, ResTable_config* out = NULL);
+    static bool getUiModeNightName(const char* name, ResTable_config* out = NULL);
+    static bool getDensityName(const char* name, ResTable_config* out = NULL);
+    static bool getTouchscreenName(const char* name, ResTable_config* out = NULL);
+    static bool getKeysHiddenName(const char* name, ResTable_config* out = NULL);
+    static bool getKeyboardName(const char* name, ResTable_config* out = NULL);
+    static bool getNavigationName(const char* name, ResTable_config* out = NULL);
+    static bool getNavHiddenName(const char* name, ResTable_config* out = NULL);
+    static bool getScreenSizeName(const char* name, ResTable_config* out = NULL);
+    static bool getSmallestScreenWidthDpName(const char* name, ResTable_config* out = NULL);
+    static bool getScreenWidthDpName(const char* name, ResTable_config* out = NULL);
+    static bool getScreenHeightDpName(const char* name, ResTable_config* out = NULL);
+    static bool getLayoutDirectionName(const char* name, ResTable_config* out = NULL);
+    static bool getVersionName(const char* name, ResTable_config* out = NULL);
+
+    int compare(const AaptGroupEntry& o) const;
+
+    const ResTable_config& toParams() const;
+
     inline bool operator<(const AaptGroupEntry& o) const { return compare(o) < 0; }
     inline bool operator<=(const AaptGroupEntry& o) const { return compare(o) <= 0; }
     inline bool operator==(const AaptGroupEntry& o) const { return compare(o) == 0; }
@@ -117,13 +110,36 @@ public:
     inline bool operator>=(const AaptGroupEntry& o) const { return compare(o) >= 0; }
     inline bool operator>(const AaptGroupEntry& o) const { return compare(o) > 0; }
 
-    String8 toString() const { return mParams.toString(); }
+    String8 toString() const;
     String8 toDirName(const String8& resType) const;
 
-    const String8 getVersionString() const { return AaptConfig::getVersion(mParams); }
+    const String8& getVersionString() const { return version; }
 
 private:
-    ConfigDescription mParams;
+    String8 mcc;
+    String8 mnc;
+    String8 locale;
+    String8 vendor;
+    String8 smallestScreenWidthDp;
+    String8 screenWidthDp;
+    String8 screenHeightDp;
+    String8 screenLayoutSize;
+    String8 screenLayoutLong;
+    String8 orientation;
+    String8 uiModeType;
+    String8 uiModeNight;
+    String8 density;
+    String8 touchscreen;
+    String8 keysHidden;
+    String8 keyboard;
+    String8 navHidden;
+    String8 navigation;
+    String8 screenSize;
+    String8 layoutDirection;
+    String8 version;
+
+    mutable bool mParamsChanged;
+    mutable ResTable_config mParams;
 };
 
 inline int compare_type(const AaptGroupEntry& lhs, const AaptGroupEntry& rhs)
@@ -171,7 +187,6 @@ public:
     size_t getSize() const { return mDataSize; }
     void* editData(size_t size);
     void* editData(size_t* outSize = NULL);
-    void* editDataInRange(size_t offset, size_t size);
     void* padData(size_t wordSize);
     status_t writeData(const void* data, size_t size);
     void clearData();
@@ -220,7 +235,7 @@ public:
     const DefaultKeyedVector<AaptGroupEntry, sp<AaptFile> >& getFiles() const
         { return mFiles; }
 
-    status_t addFile(const sp<AaptFile>& file, const bool overwriteDuplicate=false);
+    status_t addFile(const sp<AaptFile>& file);
     void removeFile(size_t index);
 
     void print(const String8& prefix) const;
@@ -286,14 +301,12 @@ private:
     status_t addDir(const String8& name, const sp<AaptDir>& dir);
     sp<AaptDir> makeDir(const String8& name);
     status_t addLeafFile(const String8& leafName,
-                         const sp<AaptFile>& file,
-                         const bool overwrite=false);
+                         const sp<AaptFile>& file);
     virtual ssize_t slurpFullTree(Bundle* bundle,
                                   const String8& srcDir,
                                   const AaptGroupEntry& kind,
                                   const String8& resType,
-                                  sp<FilePathStore>& fullResPaths,
-                                  const bool overwrite=false);
+                                  sp<FilePathStore>& fullResPaths);
 
     String8 mLeaf;
     String8 mPath;
@@ -312,7 +325,7 @@ public:
         : isPublic(false), isJavaSymbol(false), typeCode(TYPE_UNKNOWN)
     {
     }
-    explicit AaptSymbolEntry(const String8& _name)
+    AaptSymbolEntry(const String8& _name)
         : name(_name), isPublic(false), isJavaSymbol(false), typeCode(TYPE_UNKNOWN)
     {
     }
@@ -562,7 +575,6 @@ public:
     status_t buildIncludedResources(Bundle* bundle);
     status_t addIncludedResources(const sp<AaptFile>& file);
     const ResTable& getIncludedResources() const;
-    AssetManager& getAssetManager();
 
     void print(const String8& prefix) const;
 
@@ -589,8 +601,7 @@ private:
                                   const String8& srcDir,
                                   const AaptGroupEntry& kind,
                                   const String8& resType,
-                                  sp<FilePathStore>& fullResPaths,
-                                  const bool overwrite=false);
+                                  sp<FilePathStore>& fullResPaths);
 
     ssize_t slurpResourceTree(Bundle* bundle, const String8& srcDir);
     ssize_t slurpResourceZip(Bundle* bundle, const char* filename);

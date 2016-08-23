@@ -26,22 +26,13 @@
 
 #else /*not HAVE_ENDIAN_H*/
 
-#ifndef __BIG_ENDIAN
 #define __BIG_ENDIAN 0x1000
-#endif
-
-#ifndef __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN 0x0001
-#endif
 
 #if defined(HAVE_LITTLE_ENDIAN)
-	#ifndef __BYTE_ORDER
-	# define __BYTE_ORDER __LITTLE_ENDIAN
-	#endif
+# define __BYTE_ORDER __LITTLE_ENDIAN
 #else
-	#ifndef __BYTE_ORDER
-	# define __BYTE_ORDER __BIG_ENDIAN
-	#endif
+# define __BYTE_ORDER __BIG_ENDIAN
 #endif
 
 #endif /*not HAVE_ENDIAN_H*/

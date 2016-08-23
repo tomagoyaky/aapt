@@ -182,11 +182,11 @@ private:
 
     /*
      * Create the asset from a memory-mapped file segment with compressed
-     * data.
+     * data.  "method" is a Zip archive compression method constant.
      *
      * The asset takes ownership of the FileMap.
      */
-    static Asset* createFromCompressedMap(FileMap* dataMap,
+    static Asset* createFromCompressedMap(FileMap* dataMap, int method,
         size_t uncompressedLen, AccessMode mode);
 
 
@@ -286,7 +286,8 @@ public:
      *
      * On success, the object takes ownership of "fd".
      */
-    status_t openChunk(FileMap* dataMap, size_t uncompressedLen);
+    status_t openChunk(FileMap* dataMap, int compressionMethod,
+        size_t uncompressedLen);
 
     /*
      * Standard Asset interfaces.

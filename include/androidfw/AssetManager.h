@@ -69,13 +69,6 @@ struct ResTable_config;
  */
 class AssetManager : public AAssetManager {
 public:
-    static const char* RESOURCES_FILENAME;
-    static const char* IDMAP_BIN;
-    static const char* OVERLAY_DIR;
-    static const char* TARGET_PACKAGE_NAME;
-    static const char* TARGET_APK_PATH;
-    static const char* IDMAP_DIR;
-
     typedef enum CacheMode {
         CACHE_UNKNOWN = 0,
         CACHE_OFF,          // don't try to cache file locations
@@ -99,8 +92,7 @@ public:
      * then on success, *cookie is set to the value corresponding to the
      * newly-added asset source.
      */
-    bool addAssetPath(const String8& path, int32_t* cookie);
-    bool addOverlayPath(const String8& path, int32_t* cookie);
+    bool addAssetPath(const String8& path, void** cookie);
 
     /*                                                                       
      * Convenience for adding the standard system assets.  Uses the
@@ -111,17 +103,17 @@ public:
     /*                                                                       
      * Iterate over the asset paths in this manager.  (Previously
      * added via addAssetPath() and addDefaultAssets().)  On first call,
-     * 'cookie' must be 0, resulting in the first cookie being returned.
-     * Each next cookie will be returned there-after, until -1 indicating
+     * 'cookie' must be NULL, resulting in the first cookie being returned.
+     * Each next cookie will be returned there-after, until NULL indicating
      * the end has been reached.
      */
-    int32_t nextAssetPath(const int32_t cookie) const;
+    void* nextAssetPath(void* cookie) const;
 
     /*                                                                       
      * Return an asset path in the manager.  'which' must be between 0 and
      * countAssetPaths().
      */
-    String8 getAssetPath(const int32_t cookie) const;
+    String8 getAssetPath(void* cookie) const;
 
     /*
      * Set the current locale and vendor.  The locale can change during
@@ -161,13 +153,13 @@ public:
      * path hierarchy, and will not be seen by "AssetDir" or included
      * in our filename cache.
      */
-    Asset* openNonAsset(const char* fileName, AccessMode mode, int32_t* outCookie = NULL);
+    Asset* openNonAsset(const char* fileName, AccessMode mode);
 
     /*
      * Explicit non-asset file.  The file explicitly named by the cookie (the
      * resource set to look in) and fileName will be opened and returned.
      */
-    Asset* openNonAsset(const int32_t cookie, const char* fileName, AccessMode mode);
+    Asset* openNonAsset(void* cookie, const char* fileName, AccessMode mode);
 
     /*
      * Open a directory within the asset hierarchy.
@@ -191,7 +183,7 @@ public:
      *
      * To open the top-level directory, pass in "".
      */
-    AssetDir* openNonAssetDir(const int32_t cookie, const char* dirName);
+    AssetDir* openNonAssetDir(void* cookie, const char* dirName);
 
     /*
      * Get the type of a file in the asset hierarchy.  They will either
@@ -226,21 +218,12 @@ public:
      */
     void getLocales(Vector<String8>* locales) const;
 
-    /**
-     * Generate idmap data to translate resources IDs between a package and a
-     * corresponding overlay package.
-     */
-    bool createIdmap(const char* targetApkPath, const char* overlayApkPath,
-        uint32_t targetCrc, uint32_t overlayCrc, uint32_t** outData, size_t* outSize);
-
 private:
     struct asset_path
     {
-        asset_path() : path(""), type(kFileTypeRegular), idmap(""), isSystemOverlay(false) {}
         String8 path;
         FileType type;
         String8 idmap;
-        bool isSystemOverlay;
     };
 
     Asset* openInPathLocked(const char* fileName, AccessMode mode,
@@ -280,16 +263,20 @@ private:
     const ResTable* getResTable(bool required = true) const;
     void setLocaleLocked(const char* locale);
     void updateResourceParamsLocked() const;
-    bool appendPathToResTable(const asset_path& ap) const;
+
+    bool createIdmapFileLocked(const String8& originalPath, const String8& overlayPath,
+                               const String8& idmapPath);
+
+    bool isIdmapStaleLocked(const String8& originalPath, const String8& overlayPath,
+                            const String8& idmapPath);
 
     Asset* openIdmapLocked(const struct asset_path& ap) const;
 
-    void addSystemOverlays(const char* pathOverlaysList, const String8& targetPackagePath,
-            ResTable* sharedRes, size_t offset) const;
+    bool getZipEntryCrcLocked(const String8& zipPath, const char* entryFilename, uint32_t* pCrc);
 
     class SharedZip : public RefBase {
     public:
-        static sp<SharedZip> get(const String8& path, bool createIfNotPresent = true);
+        static sp<SharedZip> get(const String8& path);
 
         ZipFileRO* getZip();
 
@@ -300,9 +287,6 @@ private:
         ResTable* setResourceTable(ResTable* res);
         
         bool isUpToDate();
-
-        void addOverlay(const asset_path& ap);
-        bool getOverlay(size_t idx, asset_path* out) const;
         
     protected:
         ~SharedZip();
@@ -317,8 +301,6 @@ private:
 
         Asset* mResourceTableAsset;
         ResTable* mResourceTable;
-
-        Vector<asset_path> mOverlays;
 
         static Mutex gLock;
         static DefaultKeyedVector<String8, wp<SharedZip> > gOpen;
@@ -352,9 +334,6 @@ private:
         static String8 getPathName(const char* path);
 
         bool isUpToDate();
-
-        void addOverlay(const String8& path, const asset_path& overlay);
-        bool getOverlay(const String8& path, size_t idx, asset_path* out) const;
         
     private:
         void closeZip(int idx);

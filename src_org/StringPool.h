@@ -20,14 +20,13 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include <libexpat/expat.h>
+
 using namespace android;
 
 #define PRINT_STRING_METRICS 0
 
-#if __cplusplus >= 201103L
-void strcpy16_htod(char16_t* dst, const char16_t* src);
-#endif
-void strcpy16_htod(uint16_t* dst, const char16_t* src);
+void strcpy16_htod(uint16_t* dst, const uint16_t* src);
 
 void printStringPool(const ResStringPool* pool);
 
@@ -41,7 +40,7 @@ class StringPool
 public:
     struct entry {
         entry() : offset(0) { }
-        explicit entry(const String16& _value) : value(_value), offset(0), hasStyles(false) { }
+        entry(const String16& _value) : value(_value), offset(0), hasStyles(false) { }
         entry(const entry& o) : value(o.value), offset(o.offset),
                 hasStyles(o.hasStyles), indices(o.indices),
                 configTypeName(o.configTypeName), configs(o.configs) { }
@@ -139,14 +138,7 @@ public:
     const Vector<size_t>* offsetsForString(const String16& val) const;
 
 private:
-    class ConfigSorter
-    {
-    public:
-        explicit ConfigSorter(const StringPool&);
-        bool operator()(size_t l, size_t r);
-    private:
-        const StringPool& pool;
-    };
+    static int config_sort(void* state, const void* lhs, const void* rhs);
 
     const bool                              mUTF8;
 

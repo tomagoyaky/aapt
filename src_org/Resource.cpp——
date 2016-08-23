@@ -296,13 +296,17 @@ static status_t makeFileResources(Bundle* bundle, const sp<AaptAssets>& assets,
         }
         String8 resPath = it.getPath();
         resPath.convertToResPath();
+
+        String8 obfuscationName;
+        String8 obfuscationPath = getObfuscationName(resPath, obfuscationName);
+
         table->addEntry(SourcePos(it.getPath(), 0), String16(assets->getPackage()),
                         type16,
-                        baseName,
-                        String16(resPath),
+                        baseName, // String16(obfuscationName),
+                        String16(obfuscationPath), // resPath
                         NULL,
                         &it.getParams());
-        assets->addResource(it.getLeafName(), resPath, it.getFile(), type8);
+        assets->addResource(it.getLeafName(), obfuscationPath/*resPath*/, it.getFile(), type8);
     }
 
     return hasErrors ? UNKNOWN_ERROR : NO_ERROR;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2012 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,26 @@
  * limitations under the License.
  */
 
-//
-// implementation of sys/uio.h for platforms that don't have it (Win32)
-//
-#ifndef _LIBS_CUTILS_UIO_H
-#define _LIBS_CUTILS_UIO_H
+/*
+ * Provides a portable version of qsort_r, called qsort_r_compat, which is a
+ * reentrant variant of qsort that passes a user data pointer to its comparator.
+ * This implementation follows the BSD parameter convention.
+ */
 
-#ifdef HAVE_SYS_UIO_H
-#include <sys/uio.h>
-#else
+#ifndef ___QSORT_R_COMPAT_H
+#define ___QSORT_R_COMPAT_H
+
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stddef.h>
-
-struct iovec {
-    const void*  iov_base;
-    size_t       iov_len;
-};
-
-extern int  readv( int  fd, struct iovec*  vecs, int  count );
-extern int  writev( int  fd, const struct iovec*  vecs, int  count );
+void qsort_r_compat(void* base, size_t nel, size_t width, void* thunk,
+        int (*compar)(void*, const void* , const void* ));
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* !HAVE_SYS_UIO_H */
-
-#endif /* _LIBS_UTILS_UIO_H */
-
+#endif // ___QSORT_R_COMPAT_H

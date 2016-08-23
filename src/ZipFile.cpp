@@ -25,7 +25,7 @@
 
 #include "ZipFile.h"
 
-#include <zlib.h>
+#include <zlib/zlib.h>
 #define DEF_MEM_LEVEL 8                // normally in zutil.h?
 
 #include <memory.h>
@@ -676,6 +676,8 @@ status_t ZipFile::copyFpToFp(FILE* dstFp, FILE* srcFp, unsigned long* pCRC32)
 status_t ZipFile::copyDataToFp(FILE* dstFp,
     const void* data, size_t size, unsigned long* pCRC32)
 {
+    size_t count;
+
     *pCRC32 = crc32(0L, Z_NULL, 0);
     if (size > 0) {
         *pCRC32 = crc32(*pCRC32, (const unsigned char*)data, size);

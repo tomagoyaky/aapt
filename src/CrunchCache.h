@@ -15,6 +15,7 @@
 #include "CacheUpdater.h"
 
 using namespace android;
+
 /** CrunchCache
  *  This class is a cache manager which can pre-process PNG files and store
  *  them in a mirror-cache. It's capable of doing incremental updates to its
@@ -80,7 +81,7 @@ private:
      *          // Recrunch sourceFile out to destFile.
      *
      */
-    bool needsUpdating(const String8& relativePath) const;
+    bool needsUpdating(String8 relativePath) const;
 
     // DATA MEMBERS ====================================================
 

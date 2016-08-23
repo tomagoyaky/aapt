@@ -523,7 +523,7 @@
 #endif
 
 /* Include all user configurable info, including optional assembler routines */
-#include "pngconf.h"
+#include "libpng/pngconf.h"
 
 /*
  * Added at libpng-1.2.8 */
@@ -2711,7 +2711,7 @@ extern PNG_EXPORT(void, png_write_png) PNGARG((png_structp png_ptr,
 #      define png_debug(l,m) \
        { \
        int num_tabs=l; \
-       fprintf(PNG_DEBUG_FILE, "%s"m PNG_STRING_NEWLINE,(num_tabs==1 ? "\t" : \
+       fprintf(PNG_DEBUG_FILE,"%s"m PNG_STRING_NEWLINE,(num_tabs==1 ? "\t" : \
          (num_tabs==2 ? "\t\t":(num_tabs>2 ? "\t\t\t":"")))); \
        }
 #    endif

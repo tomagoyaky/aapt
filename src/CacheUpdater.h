@@ -12,9 +12,6 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include "Images.h"
-#ifdef _WIN32
-#include <direct.h>
-#endif
 
 using namespace android;
 
@@ -30,8 +27,6 @@ using namespace android;
  */
 class CacheUpdater {
 public:
-    virtual ~CacheUpdater() {}
-
     // Make sure all the directories along this path exist
     virtual void ensureDirectoriesExist(String8 path) = 0;
 
@@ -51,7 +46,7 @@ private:
 class SystemCacheUpdater : public CacheUpdater {
 public:
     // Constructor to set bundle to pass to preProcessImage
-    explicit SystemCacheUpdater (Bundle* b)
+    SystemCacheUpdater (Bundle* b)
         : bundle(b) { };
 
     // Make sure all the directories along this path exist
@@ -81,7 +76,7 @@ public:
                 // Advance to the next segment of the path
                 existsPath.appendPath(toCreate.walkPath(&remains));
                 toCreate = remains;
-#ifdef _WIN32
+#ifdef HAVE_MS_C_RUNTIME
                 _mkdir(existsPath.string());
 #else
                 mkdir(existsPath.string(), S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP);

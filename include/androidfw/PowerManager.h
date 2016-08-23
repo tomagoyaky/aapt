@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2010 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef __TEST_HELPER_H
-#define __TEST_HELPER_H
+#ifndef _ANDROIDFW_POWER_MANAGER_H
+#define _ANDROIDFW_POWER_MANAGER_H
 
-#include <utils/String8.h>
 
 namespace android {
 
-/**
- * Stream operator for nicely printing String8's in gtest output.
- */
-inline std::ostream& operator<<(std::ostream& stream, const String8& str) {
-    return stream << str.string();
-}
+enum {
+    USER_ACTIVITY_EVENT_OTHER = 0,
+    USER_ACTIVITY_EVENT_BUTTON = 1,
+    USER_ACTIVITY_EVENT_TOUCH = 2,
 
-}
+    USER_ACTIVITY_EVENT_LAST = USER_ACTIVITY_EVENT_TOUCH, // Last valid event code.
+};
 
-#endif
+} // namespace android
+
+#endif // _ANDROIDFW_POWER_MANAGER_H
